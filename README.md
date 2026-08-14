@@ -42,8 +42,6 @@ LocalFusionRAG/
 - 中国法院网：https://www.chinacourt.org/
 - 中国裁判文书网：https://wenshu.court.gov.cn/
 
-不要将未获授权的批量案例、个人敏感信息或真实 API Key 提交到 GitHub。
-
 法律 Markdown 可使用以下头信息：
 
 ```yaml
