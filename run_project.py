@@ -11,7 +11,7 @@ from rag_core import DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKER_MODEL, RAGEngine,
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_DOCS = BASE_DIR / "knowledge_base" / "project_docs"
+DEFAULT_DOCS = BASE_DIR / "knowledge_base" / "legal_docs"
 DEFAULT_INDEX = BASE_DIR / "storage" / "faiss"
 DEFAULT_CASES = BASE_DIR / "evaluation" / "questions.json"
 DEFAULT_REPORT = BASE_DIR / "storage" / "evaluation_report.json"
@@ -96,6 +96,8 @@ def add_retrieval_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--top-k", type=positive_int, default=4)
     parser.add_argument("--max-distance", type=positive_float, default=1.2)
     parser.add_argument("--retrieval-mode", choices=("dense", "bm25", "hybrid"), default="hybrid")
+    parser.add_argument("--document-type", choices=("all", "law", "case"), default="all")
+    parser.add_argument("--validity", choices=("all", "current", "historical", "unknown"), default="all")
     parser.add_argument("--no-rerank", action="store_true", help="关闭 CrossEncoder 重排序")
     parser.add_argument("--no-rewrite", action="store_true", help="关闭 7B 模型查询改写")
     parser.add_argument(
@@ -132,6 +134,8 @@ def create_engine(args: argparse.Namespace) -> RAGEngine:
         api_base_url=args.api_base_url,
         api_key=os.getenv("RAG_API_KEY", ""),
         api_model=args.api_model,
+        domain_profile=os.getenv("RAG_DOMAIN_PROFILE", "legal_assistant"),
+        intent_routing=os.getenv("RAG_INTENT_ROUTING", "hybrid"),
     )
 
 
@@ -146,12 +150,15 @@ def ask_command(args: argparse.Namespace) -> None:
         rerank=not args.no_rerank,
         rewrite_query=not args.no_rewrite,
         min_rerank_score=args.min_rerank_score,
+        document_type=args.document_type,
+        validity=args.validity,
     )
     if retrieval.sources:
         print(
             f"===== 检索信息 =====\n查询：{retrieval.query}\n"
             f"方式：{retrieval.mode}，查询改写：{'是' if retrieval.rewrite_applied else '否'}，"
-            f"重排序：{retrieval.reranker_backend if retrieval.reranker_backend != 'none' else '否'}"
+            f"重排序：{retrieval.reranker_backend if retrieval.reranker_backend != 'none' else '否'}，"
+            f"意图：{retrieval.intent}，生成链：{retrieval.generation_chain}"
         )
         print("===== 检索来源 =====")
         for number, source in enumerate(retrieval.sources, start=1):
@@ -177,6 +184,8 @@ def serve_command(args: argparse.Namespace) -> None:
     os.environ["RAG_MIN_RERANK_SCORE"] = (
         "" if args.min_rerank_score is None else str(args.min_rerank_score)
     )
+    os.environ.setdefault("RAG_DOMAIN_PROFILE", "legal_assistant")
+    os.environ.setdefault("RAG_INTENT_ROUTING", "hybrid")
 
     import uvicorn
 
@@ -275,6 +284,8 @@ def evaluate_command(args: argparse.Namespace) -> None:
                 mode=mode,
                 rerank=use_reranker,
                 min_rerank_score=args.min_rerank_score if use_reranker else None,
+                document_type=args.document_type,
+                validity=args.validity,
             )
             targets = expected_sources(case)
             ranks = rank_relevant_sources(retrieval.sources, targets)

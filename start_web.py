@@ -22,13 +22,14 @@ LOCAL_MODEL_PATH = r""
 # 3. API 模式：填写兼容接口地址、密钥和模型名称；本地模式不用填写。
 # 切勿把真实 API Key 提交到 GitHub。
 API_BASE_URL = ""
-API_KEY = ""
+API_KEY = ""  # 仅在本地运行时填写，禁止提交真实密钥。
 API_MODEL = ""
 
 # 4. 检索模型：可填写本地目录；留空时使用项目默认 BGE 模型名称。
 EMBEDDING_MODEL = r""
 
 # 5. 重排序模型：可填写本地目录；留空时使用默认名称或轻量回退。
+# 示例：RERANKER_MODEL = r"path/to/bge-reranker-base"
 RERANKER_MODEL = r""
 
 # 6. 模型已下载时保持 True，禁止 BGE/Reranker 连接模型仓库。
@@ -36,8 +37,17 @@ RERANKER_MODEL = r""
 MODEL_REPOSITORY_OFFLINE = True
 
 # 7. 回答长度和网页端口；回答越长，耗时或 API 费用通常越高。
-MAX_TOKENS = 256
+MAX_TOKENS = 512
 PORT = 8000
+
+# 8. 领域画像：本项目固定使用中国大陆中文法律资料。
+DOMAIN_PROFILE = "legal_assistant"  # 法律辅助分析领域；不要改成其他领域除非复用旧编程语料。
+
+# 9. 知识库目录：放入已授权法条/判例资料，可改为外部目录。
+KNOWLEDGE_DIR = r"knowledge_base/legal_docs"  # 放入已授权的法条/判例 DOCX、PDF、Markdown 或 TXT。
+
+# 10. 意图路由：rule 只用关键词，hybrid 对模糊问题再调用模型，llm 全部调用模型分类。
+INTENT_ROUTING = "hybrid"
 
 # ==================== 配置结束：以下代码通常不用修改 ====================
 
@@ -80,6 +90,9 @@ def main() -> None:
     os.environ["HF_HUB_OFFLINE"] = offline
     os.environ["TRANSFORMERS_OFFLINE"] = offline
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+    os.environ["RAG_DOMAIN_PROFILE"] = DOMAIN_PROFILE.strip() or "legal_assistant"
+    os.environ["RAG_INTENT_ROUTING"] = INTENT_ROUTING.strip() or "hybrid"
+    os.environ["RAG_KNOWLEDGE_DIR"] = str(Path(KNOWLEDGE_DIR).resolve())
     provider = LLM_PROVIDER.strip().lower()
     if provider not in {"local", "api"}:
         raise ValueError('LLM_PROVIDER 只能填写 "local" 或 "api"。')

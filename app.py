@@ -24,7 +24,16 @@ from rag_core import (
 
 
 BASE_DIR = Path(__file__).resolve().parent
-KNOWLEDGE_DIR = BASE_DIR / "knowledge_base" / "project_docs"
+_knowledge_dir_env = os.getenv("RAG_KNOWLEDGE_DIR", "").strip()
+_configured_knowledge_dir = Path(
+    _knowledge_dir_env or str(BASE_DIR / "knowledge_base" / "legal_docs")
+)
+_example_knowledge_dir = BASE_DIR / "knowledge_base" / "project_docs"
+if _knowledge_dir_env and not _configured_knowledge_dir.is_dir():
+    raise RuntimeError(f"RAG_KNOWLEDGE_DIR 指向的目录不存在：{_configured_knowledge_dir}")
+if not _knowledge_dir_env and not _configured_knowledge_dir.exists() and _example_knowledge_dir.is_dir():
+    _configured_knowledge_dir = _example_knowledge_dir
+KNOWLEDGE_DIR = _configured_knowledge_dir.resolve()
 UPLOAD_DIR = KNOWLEDGE_DIR / "uploads"
 DEFAULT_INDEX_DIR = BASE_DIR / "storage" / "faiss"
 WEB_DIR = BASE_DIR / "web"
@@ -48,6 +57,8 @@ class ChatRequest(BaseModel):
     rerank: bool = True
     rewrite_query: bool = True
     min_rerank_score: float | None = None
+    document_type: Literal["all", "law", "case"] = "all"
+    validity: Literal["all", "current", "historical", "unknown"] = "all"
 
 
 def llm_provider_from_env() -> str:
@@ -95,6 +106,8 @@ def get_engine() -> RAGEngine:
                     api_base_url=os.getenv("RAG_API_BASE_URL", ""),
                     api_key=os.getenv("RAG_API_KEY", ""),
                     api_model=os.getenv("RAG_API_MODEL", ""),
+                    domain_profile=os.getenv("RAG_DOMAIN_PROFILE", "legal_assistant"),
+                    intent_routing=os.getenv("RAG_INTENT_ROUTING", "hybrid"),
                 )
     return _engine
 
@@ -123,6 +136,9 @@ def health() -> dict:
         "model_configured": configured,
         "model_loaded": _engine is not None and _engine.model_loaded,
         "reranker_status": _engine.reranker_status if _engine is not None else "not_loaded",
+        "domain_profile": os.getenv("RAG_DOMAIN_PROFILE", "legal_assistant"),
+        "intent_routing": os.getenv("RAG_INTENT_ROUTING", "hybrid"),
+        "knowledge_dir_configured": KNOWLEDGE_DIR.is_dir(),
         "index_ready": index_is_ready(index_dir_from_env()),
     }
 
@@ -197,6 +213,8 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
                 if request.min_rerank_score is not None
                 else min_rerank_score_from_env()
             ),
+            document_type=request.document_type,
+            validity=request.validity,
         )
     except (FileNotFoundError, ValueError) as exc:
         logger.warning("问答请求无法处理：%s", exc)
@@ -213,6 +231,12 @@ def chat_stream(request: ChatRequest) -> StreamingResponse:
             rewrite_applied=retrieval.rewrite_applied,
             reranked=retrieval.reranked,
             reranker_backend=retrieval.reranker_backend,
+            original_query=retrieval.original_query or retrieval.query,
+            rewritten_query=retrieval.rewritten_query or retrieval.query,
+            intent=retrieval.intent,
+            intent_confidence=retrieval.intent_confidence,
+            route_source=retrieval.route_source,
+            generation_chain=retrieval.generation_chain,
             sources=[source.to_dict() for source in retrieval.sources],
         )
         try:

@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .pytest-tmp*/
 .test-tmp*/
+.test-tmp*
 .mypy_cache/
 .ruff_cache/
 .coverage
@@ -21,6 +22,9 @@ env/
 *.key
 *.pem
 credentials*.json
+secrets*.json
+*api_key*
+*apikey*
 
 # IDE 与操作系统文件
 .idea/
@@ -29,6 +33,8 @@ credentials*.json
 .DS_Store
 Thumbs.db
 Desktop.ini
+~$*.doc
+~$*.docx
 
 # 本地模型与模型缓存
 models/
@@ -43,9 +49,21 @@ model_cache/
 # RAG 运行数据与索引
 storage/
 outputs/
+*.faiss
+*.pkl
 data/public_t2reranking/
+data/programming_docs_sources/
 knowledge_base/uploads/
+knowledge_base/*/uploads/
 knowledge_base/.cache/
+knowledge_base/programming_docs/
+knowledge_base/legal_docs/**
+!knowledge_base/legal_docs/
+!knowledge_base/legal_docs/README.md
+.cache/
+*.sqlite
+*.sqlite3
+*.db
 
 # project_docs/ 是可提交的示例知识库；根目录同名文件是旧副本
 knowledge_base/*.md
