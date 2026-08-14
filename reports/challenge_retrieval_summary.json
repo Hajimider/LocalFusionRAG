@@ -1,0 +1,36 @@
+{
+  "evaluation_scope": "本地基础 30 题检索消融",
+  "dataset_role": "开发验证，不是公开基准",
+  "documents": 5,
+  "top_k": 5,
+  "results": {
+    "dense": {
+      "hit_at_5": 0.9615,
+      "recall_at_5": 0.9423,
+      "mrr": 0.8910,
+      "ndcg_at_5": 0.8878,
+      "rejection_accuracy": 0.2500
+    },
+    "bm25": {
+      "hit_at_5": 1.0000,
+      "recall_at_5": 0.9808,
+      "mrr": 1.0000,
+      "ndcg_at_5": 0.9851,
+      "rejection_accuracy": 0.2500
+    },
+    "hybrid": {
+      "hit_at_5": 1.0000,
+      "recall_at_5": 1.0000,
+      "mrr": 0.9551,
+      "ndcg_at_5": 0.9546,
+      "rejection_accuracy": 0.2500
+    },
+    "hybrid_reranker": {
+      "hit_at_5": 1.0000,
+      "recall_at_5": 1.0000,
+      "mrr": 0.9808,
+      "ndcg_at_5": 0.9753,
+      "rejection_accuracy": 0.2500
+    }
+  }
+}

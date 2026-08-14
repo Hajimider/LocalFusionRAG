@@ -1,0 +1,21 @@
+{
+  "dataset": "C-MTEB/T2Reranking",
+  "subset": {
+    "seed": 20260813,
+    "queries": 99,
+    "documents": 1591,
+    "relevant_documents": 806
+  },
+  "parameters": {
+    "chunk_size": 300,
+    "chunk_overlap": 50,
+    "top_k": 5
+  },
+  "results": {
+    "dense": {"hit_at_5": 0.9394, "recall_at_5": 0.3766, "mrr": 0.7387, "ndcg_at_5": 0.5845},
+    "bm25": {"hit_at_5": 0.9596, "recall_at_5": 0.3762, "mrr": 0.7332, "ndcg_at_5": 0.5656},
+    "hybrid": {"hit_at_5": 0.9596, "recall_at_5": 0.3613, "mrr": 0.7453, "ndcg_at_5": 0.5689},
+    "hybrid_reranker": {"hit_at_5": 0.9798, "recall_at_5": 0.4193, "mrr": 0.7983, "ndcg_at_5": 0.6374}
+  },
+  "scope_note": "固定公开子集上的一次完整检索消融；不是 C-MTEB 官方全量排行榜成绩"
+}

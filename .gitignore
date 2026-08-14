@@ -1,0 +1,64 @@
+# Python 缓存与测试产物
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.pytest-tmp*/
+.test-tmp*/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# 虚拟环境与本地密钥
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials*.json
+
+# IDE 与操作系统文件
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 本地模型与模型缓存
+models/
+model_cache/
+*.gguf
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pth
+
+# RAG 运行数据与索引
+storage/
+outputs/
+data/public_t2reranking/
+knowledge_base/uploads/
+knowledge_base/.cache/
+
+# project_docs/ 是可提交的示例知识库；根目录同名文件是旧副本
+knowledge_base/*.md
+knowledge_base/*.txt
+*.pdf
+
+# 本地日志、临时文件与内部过程记录
+*.log
+*.tmp
+*.part
+测试.txt
+findings.md
+progress.md
+task_plan.md
+docs/superpowers/
+Local-Hybrid-RAG-QA 本地混合检索知识库问答系统.md

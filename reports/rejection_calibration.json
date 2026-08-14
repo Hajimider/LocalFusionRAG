@@ -1,0 +1,22 @@
+{
+  "evaluation_scope": "本地 36 题拒答阈值校准",
+  "dataset_role": "开发验证，不是公开基准",
+  "selection_rule": "仅在校准集上选择 balanced_accuracy 最大的阈值，并列时优先拒答召回率",
+  "threshold": 0.280595,
+  "calibration": {
+    "count": 18,
+    "accuracy": 1.0000,
+    "balanced_accuracy": 1.0000,
+    "answerable_recall": 1.0000,
+    "rejection_recall": 1.0000,
+    "confusion_matrix": {"tp": 13, "tn": 5, "fp": 0, "fn": 0}
+  },
+  "independent_test": {
+    "count": 18,
+    "accuracy": 0.9444,
+    "balanced_accuracy": 0.9615,
+    "answerable_recall": 0.9231,
+    "rejection_recall": 1.0000,
+    "confusion_matrix": {"tp": 12, "tn": 5, "fp": 0, "fn": 1}
+  }
+}

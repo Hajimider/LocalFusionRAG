@@ -1,0 +1,28 @@
+[
+  {
+    "question": "Python 中列表和元组有什么区别？",
+    "expected_source": "python_basics.md",
+    "expected_keywords": ["列表", "元组", "可变"]
+  },
+  {
+    "question": "一次常见的 Git 提交流程是什么？",
+    "expected_source": "git_workflow.md",
+    "expected_keywords": ["git status", "git add", "git commit"]
+  },
+  {
+    "question": "RAG 的标准流程包含哪些步骤？",
+    "expected_source": "rag_basics.md",
+    "expected_keywords": ["文档加载", "向量化", "相似度检索"]
+  },
+  {
+    "question": "RAG 和微调分别适合解决什么问题？",
+    "expected_source": "rag_basics.md",
+    "expected_keywords": ["RAG", "微调"]
+  },
+  {
+    "question": "公司今年的年终奖具体是多少？",
+    "expected_source": null,
+    "expected_keywords": ["没有足够信息"]
+  }
+]
+

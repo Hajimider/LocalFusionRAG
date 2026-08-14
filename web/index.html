@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本地进阶 RAG 知识库</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">LOCAL AI WORKSPACE</p>
+      <h1>本地进阶 RAG 知识库</h1>
+    </div>
+    <div id="health" class="status" aria-live="polite">检查服务中...</div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="panel-heading">
+          <h2>知识库</h2>
+          <span id="index-state" class="badge">未检查</span>
+        </div>
+        <label class="file-picker">
+          <span>添加 PDF / MD / TXT</span>
+          <input id="file-input" type="file" accept=".pdf,.md,.txt">
+        </label>
+        <button id="upload-button" class="button secondary" type="button">上传文档</button>
+        <button id="build-button" class="button primary" type="button">重建知识库索引</button>
+        <p id="index-message" class="muted" aria-live="polite"></p>
+      </section>
+
+      <section class="panel controls">
+        <h2>回答设置</h2>
+        <label class="check-row">
+          <input id="rag-toggle" type="checkbox" checked>
+          <span>使用知识库检索</span>
+        </label>
+        <label>
+          <span class="label">检索方式</span>
+          <select id="retrieval-mode">
+            <option value="hybrid" selected>混合检索</option>
+            <option value="dense">向量检索</option>
+            <option value="bm25">BM25 检索</option>
+          </select>
+        </label>
+        <label class="check-row">
+          <input id="rewrite-toggle" type="checkbox" checked>
+          <span>查询改写</span>
+        </label>
+        <label class="check-row">
+          <input id="rerank-toggle" type="checkbox" checked>
+          <span>候选片段重排序</span>
+        </label>
+        <label>
+          <span class="label">检索片段数</span>
+          <input id="top-k" type="number" min="1" max="8" value="4">
+        </label>
+      </section>
+
+      <section class="panel note">
+        <h2>服务状态</h2>
+        <p id="model-state" class="muted">模型未加载</p>
+        <p class="muted">回答来源会显示在每条消息下方。</p>
+      </section>
+    </aside>
+
+    <section class="chat-panel">
+      <div id="messages" class="messages" aria-live="polite">
+        <div class="empty-state">
+          <h2>开始提问</h2>
+          <p>问题会经过查询改写、混合检索和重排序，再交给本地模型生成回答。</p>
+        </div>
+      </div>
+      <form id="chat-form" class="composer">
+        <textarea id="question" rows="3" maxlength="500" placeholder="输入一个关于知识库的问题..." required></textarea>
+        <div class="composer-footer">
+          <span id="chat-state" class="muted">就绪</span>
+          <button class="button primary" type="submit">发送问题</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

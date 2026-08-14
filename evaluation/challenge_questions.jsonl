@@ -1,0 +1,36 @@
+{"id":"kw-01","question":"Git 提交前如何查看工作区状态？","question_type":"keyword","difficulty":"easy","expected_sources":["git_workflow.md"],"expected_keywords":["git status"]}
+{"id":"kw-02","question":"把修改放入 Git 暂存区使用什么命令？","question_type":"keyword","difficulty":"easy","expected_sources":["git_workflow.md"],"expected_keywords":["git add"]}
+{"id":"kw-03","question":"怎样检查已经暂存的改动？","question_type":"semantic","difficulty":"medium","expected_sources":["git_workflow.md"],"expected_keywords":["git diff --staged"]}
+{"id":"kw-04","question":".gitignore 能让已经被跟踪的文件自动退出版本库吗？","question_type":"hard_negative","difficulty":"medium","expected_sources":["git_workflow.md"],"expected_keywords":["不能","跟踪"]}
+{"id":"py-01","question":"Python 列表与元组在可变性上有什么差别？","question_type":"keyword","difficulty":"easy","expected_sources":["python_basics.md"],"expected_keywords":["列表","元组","可变"]}
+{"id":"py-02","question":"数据创建后不应修改时应该选 list 还是 tuple？","question_type":"semantic","difficulty":"medium","expected_sources":["python_basics.md"],"expected_keywords":["元组"]}
+{"id":"py-03","question":"finally 中的代码什么时候执行？","question_type":"keyword","difficulty":"easy","expected_sources":["python_basics.md"],"expected_keywords":["finally"]}
+{"id":"py-04","question":"为什么不同 Python 项目要使用虚拟环境？","question_type":"semantic","difficulty":"medium","expected_sources":["python_basics.md"],"expected_keywords":["依赖","隔离"]}
+{"id":"rag-01","question":"RAG 的标准链路包括哪些步骤？","question_type":"keyword","difficulty":"easy","expected_sources":["rag_basics.md"],"expected_keywords":["文档加载","向量化","检索"]}
+{"id":"rag-02","question":"知识经常变化时为什么优先用检索增强而不是重新训练模型？","question_type":"semantic","difficulty":"medium","expected_sources":["rag_basics.md"],"expected_keywords":["更新","索引"]}
+{"id":"rag-03","question":"检索结果相关度太低时系统应如何处理？","question_type":"semantic","difficulty":"medium","expected_sources":["rag_basics.md"],"expected_keywords":["没有足够信息"]}
+{"id":"rag-04","question":"RAG 和微调分别适合处理哪些需求？","question_type":"comparison","difficulty":"medium","expected_sources":["rag_basics.md"],"expected_keywords":["RAG","微调"]}
+{"id":"ops-01","question":"星河知识助手的内部代号是什么？","question_type":"keyword","difficulty":"easy","expected_sources":["project_operations_manual.md"],"expected_keywords":["XH-RAG-2026"]}
+{"id":"ops-02","question":"系统每周何时发布，何时进入代码冻结？","question_type":"multi_fact","difficulty":"medium","expected_sources":["project_operations_manual.md"],"expected_keywords":["周三","周二"]}
+{"id":"ops-03","question":"错误率达到什么条件需要回滚？","question_type":"keyword","difficulty":"easy","expected_sources":["project_operations_manual.md"],"expected_keywords":["5 分钟","2%"]}
+{"id":"ops-04","question":"一级故障的响应时间和复盘时限分别是多少？","question_type":"multi_fact","difficulty":"medium","expected_sources":["project_operations_manual.md"],"expected_keywords":["10 分钟","24 小时"]}
+{"id":"ops-05","question":"索引备份在几点执行并保留多少天？","question_type":"multi_fact","difficulty":"medium","expected_sources":["project_operations_manual.md"],"expected_keywords":["02:30","14 天"]}
+{"id":"llm-01","question":"Decoder-Only 模型为什么需要因果掩码？","question_type":"semantic","difficulty":"medium","expected_sources":["主流大模型算法知识库.md"],"expected_keywords":["未来","自回归"]}
+{"id":"llm-02","question":"GQA 与 MHA、MQA 相比解决了什么问题？","question_type":"comparison","difficulty":"hard","expected_sources":["主流大模型算法知识库.md"],"expected_keywords":["共享","速度"]}
+{"id":"llm-03","question":"DPO 为什么比 PPO 对齐链路更简单？","question_type":"comparison","difficulty":"hard","expected_sources":["主流大模型算法知识库.md"],"expected_keywords":["奖励模型","偏好"]}
+{"id":"llm-04","question":"KV Cache 为什么能加速自回归推理？","question_type":"semantic","difficulty":"medium","expected_sources":["主流大模型算法知识库.md"],"expected_keywords":["K","V","缓存"]}
+{"id":"llm-05","question":"AWQ 与 GPTQ 都属于哪一类模型压缩方法？","question_type":"keyword","difficulty":"easy","expected_sources":["主流大模型算法知识库.md"],"expected_keywords":["量化"]}
+{"id":"llm-06","question":"LoRA 如何减少需要训练的参数？","question_type":"semantic","difficulty":"medium","expected_sources":["主流大模型算法知识库.md"],"expected_keywords":["冻结","低秩"]}
+{"id":"llm-07","question":"RAG 与 Agent 的任务边界是什么？","question_type":"comparison","difficulty":"hard","expected_sources":["主流大模型算法知识库.md","rag_basics.md"],"expected_keywords":["外部知识","工具"]}
+{"id":"cross-01","question":"本地知识助手使用什么后端、向量索引和回答模型？","question_type":"multi_hop","difficulty":"hard","expected_sources":["project_operations_manual.md","rag_basics.md"],"expected_keywords":["FastAPI","FAISS","Qwen2.5"]}
+{"id":"cross-02","question":"为了发布系统，需要满足哪些问答评测与健康检查条件？","question_type":"multi_hop","difficulty":"hard","expected_sources":["project_operations_manual.md","rag_basics.md"],"expected_keywords":["90%","五个","status=ok"]}
+{"id":"reject-01","question":"公司今年给每名员工发多少年终奖？","question_type":"unanswerable","difficulty":"medium","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-02","question":"项目负责人叫什么名字？","question_type":"unanswerable","difficulty":"easy","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-03","question":"生产服务器的公网 IP 地址是什么？","question_type":"unanswerable","difficulty":"easy","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-04","question":"Qwen3 的准确发布日期是哪一天？","question_type":"unanswerable","difficulty":"hard","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-05","question":"公司法定代表人的身份证号码是什么？","question_type":"unanswerable","difficulty":"easy","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-06","question":"生产数据库的管理员密码是多少？","question_type":"unanswerable","difficulty":"easy","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-07","question":"下一季度计划采购多少台 GPU？","question_type":"unanswerable","difficulty":"medium","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-08","question":"线上系统昨天一共处理了多少次请求？","question_type":"unanswerable","difficulty":"medium","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-09","question":"项目采用的服务器 CPU 具体型号是什么？","question_type":"unanswerable","difficulty":"medium","expected_sources":[],"expected_keywords":["没有足够信息"]}
+{"id":"reject-10","question":"团队下一次绩效评审安排在哪一天？","question_type":"unanswerable","difficulty":"hard","expected_sources":[],"expected_keywords":["没有足够信息"]}
