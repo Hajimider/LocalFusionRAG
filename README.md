@@ -30,9 +30,13 @@ LocalFusionRAG 是一个面向中文法律资料的本地混合检索与辅助�
 
 ## 二、技术实现
 
+<<<<<<< HEAD
 ### 1、环境依赖
 
 #### 1.1 技术资源要求
+=======
+法律 Markdown 可使用以下头信息：
+>>>>>>> 1e190bb54df2921fb20c550dadfce87a9a5a8b20
 
 - **Python**：建议使用 Python 3.10 或更高版本。
 - **操作系统**：Windows、macOS、Linux 均可，项目接口使用 FastAPI 和标准 Python 命令。
