@@ -135,7 +135,7 @@ def create_engine(args: argparse.Namespace) -> RAGEngine:
         api_key=os.getenv("RAG_API_KEY", ""),
         api_model=args.api_model,
         domain_profile=os.getenv("RAG_DOMAIN_PROFILE", "legal_assistant"),
-        intent_routing=os.getenv("RAG_INTENT_ROUTING", "hybrid"),
+        intent_routing=os.getenv("RAG_INTENT_ROUTING", "rule"),
     )
 
 
@@ -185,7 +185,7 @@ def serve_command(args: argparse.Namespace) -> None:
         "" if args.min_rerank_score is None else str(args.min_rerank_score)
     )
     os.environ.setdefault("RAG_DOMAIN_PROFILE", "legal_assistant")
-    os.environ.setdefault("RAG_INTENT_ROUTING", "hybrid")
+    os.environ.setdefault("RAG_INTENT_ROUTING", "rule")
 
     import uvicorn
 

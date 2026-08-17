@@ -76,4 +76,15 @@ async function askQuestion(event) {
   finally { $('question').disabled = false; $('question').focus(); }
 }
 
+document.querySelectorAll('.example-prompt').forEach((button) => {
+  button.addEventListener('click', () => {
+    $('question').value = button.dataset.question;
+    // 示例问题使用 Demo 默认检索范围，避免沿用上一次的效力筛选导致误拒答。
+    $('retrieval-mode').value = 'hybrid';
+    $('document-type').value = 'all';
+    $('validity').value = 'all';
+    $('question').focus();
+  });
+});
+
 $('upload-button').addEventListener('click', uploadFile); $('build-button').addEventListener('click', buildIndex); $('chat-form').addEventListener('submit', askQuestion); refreshHealth();

@@ -89,6 +89,17 @@ def min_rerank_score_from_env() -> float | None:
     return float(value) if value else None
 
 
+def document_limit_from_env() -> int:
+    value = os.getenv("RAG_DOCUMENT_LIMIT", "200").strip()
+    try:
+        limit = int(value)
+    except ValueError as exc:
+        raise RuntimeError("RAG_DOCUMENT_LIMIT 必须是大于等于 0 的整数。") from exc
+    if limit < 0:
+        raise RuntimeError("RAG_DOCUMENT_LIMIT 不能小于 0。")
+    return limit
+
+
 def get_engine() -> RAGEngine:
     global _engine
     if _engine is None:
@@ -107,7 +118,7 @@ def get_engine() -> RAGEngine:
                     api_key=os.getenv("RAG_API_KEY", ""),
                     api_model=os.getenv("RAG_API_MODEL", ""),
                     domain_profile=os.getenv("RAG_DOMAIN_PROFILE", "legal_assistant"),
-                    intent_routing=os.getenv("RAG_INTENT_ROUTING", "hybrid"),
+                    intent_routing=os.getenv("RAG_INTENT_ROUTING", "rule"),
                 )
     return _engine
 
@@ -137,8 +148,9 @@ def health() -> dict:
         "model_loaded": _engine is not None and _engine.model_loaded,
         "reranker_status": _engine.reranker_status if _engine is not None else "not_loaded",
         "domain_profile": os.getenv("RAG_DOMAIN_PROFILE", "legal_assistant"),
-        "intent_routing": os.getenv("RAG_INTENT_ROUTING", "hybrid"),
+        "intent_routing": os.getenv("RAG_INTENT_ROUTING", "rule"),
         "knowledge_dir_configured": KNOWLEDGE_DIR.is_dir(),
+        "document_limit": document_limit_from_env(),
         "index_ready": index_is_ready(index_dir_from_env()),
     }
 
@@ -184,6 +196,7 @@ def rebuild_index() -> dict:
                 index_dir_from_env(),
                 embedding_model_from_env(),
                 include_runtime_uploads=True,
+                document_limit=document_limit_from_env(),
             )
             if _engine is not None:
                 _engine.reload_index()

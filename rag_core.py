@@ -29,6 +29,21 @@ DEFAULT_EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
 DEFAULT_RERANKER_MODEL = "BAAI/bge-reranker-base"
 ALLOWED_DOCUMENT_TYPES = {".pdf", ".docx", ".md", ".txt"}
 LEGAL_DOCUMENT_CATEGORIES = {"宪法", "法律", "行政法规", "监察法规", "司法解释", "地方法规"}
+DEMO_PRIORITY_TITLES = (
+    "中华人民共和国宪法（2018年修正文本）",
+    "中华人民共和国民法典",
+    "中华人民共和国劳动合同法",
+    "中华人民共和国消费者权益保护法",
+    "中华人民共和国公司法",
+    "中华人民共和国刑法",
+    "中华人民共和国行政处罚法",
+    "中华人民共和国行政诉讼法",
+    "中华人民共和国民事诉讼法",
+    "中华人民共和国劳动法",
+    "中华人民共和国监察法实施条例",
+    "保障农民工工资支付条例",
+    "工伤保险条例",
+)
 INDEX_MANIFEST = "manifest.json"
 INDEX_POINTER = "CURRENT"
 INDEX_LOCK = threading.RLock()
@@ -260,20 +275,68 @@ def _parse_front_matter(text: str) -> tuple[dict[str, str], str]:
     return metadata, "\n".join(lines[end + 1:]).lstrip()
 
 
-def load_documents(source_dir: str | Path, include_runtime_uploads: bool = False):
+def _demo_document_sort_key(path: Path) -> tuple:
+    stem = path.stem
+    for priority, title in enumerate(DEMO_PRIORITY_TITLES):
+        if stem == title or stem.startswith(f"{title}_"):
+            date_match = re.search(r"_(\d{8})$", stem)
+            date = int(date_match.group(1)) if date_match else 0
+            return 0, priority, -date, path.name
+    return 1, path.name
+
+
+def _balanced_document_sample(paths: Sequence[Path], root: Path, limit: int | None) -> list[Path]:
+    if limit is None or limit == 0 or len(paths) <= limit:
+        return sorted(paths)
+    if limit < 0:
+        raise ValueError("文档上限不能小于 0。")
+
+    groups: dict[str, list[Path]] = {}
+    for path in paths:
+        relative = path.relative_to(root)
+        category = relative.parts[0] if len(relative.parts) > 1 else "其他"
+        groups.setdefault(category, []).append(path)
+    for group in groups.values():
+        group.sort(key=_demo_document_sort_key)
+
+    selected: list[Path] = []
+    categories = sorted(groups)
+    while len(selected) < limit and categories:
+        remaining = []
+        for category in categories:
+            group = groups[category]
+            if group:
+                selected.append(group.pop(0))
+                if len(selected) == limit:
+                    break
+            if group:
+                remaining.append(category)
+        categories = remaining
+    return selected
+
+
+def load_documents(
+    source_dir: str | Path,
+    include_runtime_uploads: bool = False,
+    document_limit: int | None = None,
+):
     root = Path(source_dir).resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"知识库目录不存在：{root}")
 
     documents = []
     ignored_directories = {".cache", "__pycache__"}
-    if not include_runtime_uploads:
-        ignored_directories.add("uploads")
+    source_paths: list[Path] = []
+    runtime_uploads: list[Path] = []
     legacy_doc_count = 0
     for path in sorted(root.rglob("*")):
-        if any(part in ignored_directories for part in path.relative_to(root).parts[:-1]):
+        relative_parts = path.relative_to(root).parts[:-1]
+        if any(part in ignored_directories for part in relative_parts):
             continue
         if not path.is_file():
+            continue
+        is_runtime_upload = "uploads" in relative_parts
+        if is_runtime_upload and not include_runtime_uploads:
             continue
         suffix = path.suffix.lower()
         if suffix == ".doc":
@@ -283,6 +346,11 @@ def load_documents(source_dir: str | Path, include_runtime_uploads: bool = False
             continue
         if path.name.lower() in {"readme.md", "readme.txt"} or path.name.startswith("_"):
             continue
+        (runtime_uploads if is_runtime_upload else source_paths).append(path)
+
+    selected_paths = _balanced_document_sample(source_paths, root, document_limit)
+    for path in [*selected_paths, *sorted(runtime_uploads)]:
+        suffix = path.suffix.lower()
         source = path.relative_to(root).as_posix()
         if suffix == ".pdf":
             from langchain_community.document_loaders import PyPDFLoader
@@ -431,10 +499,15 @@ def build_index(
     chunk_size: int = 500,
     chunk_overlap: int = 80,
     include_runtime_uploads: bool = False,
+    document_limit: int | None = None,
 ) -> dict:
     from langchain_community.vectorstores import FAISS
 
-    documents = load_documents(source_dir, include_runtime_uploads=include_runtime_uploads)
+    documents = load_documents(
+        source_dir,
+        include_runtime_uploads=include_runtime_uploads,
+        document_limit=document_limit,
+    )
     chunks = split_documents(documents, chunk_size, chunk_overlap)
     store = FAISS.from_documents(chunks, create_embeddings(embedding_model))
     destination = Path(index_dir).resolve()
@@ -479,6 +552,7 @@ def build_index(
     finally:
         shutil.rmtree(temporary, ignore_errors=True)
     return {
+        "source_files": len({document.metadata.get("source", "") for document in documents}),
         "document_sections": len(documents),
         "chunks": len(chunks),
         "index_dir": str(destination),
@@ -665,7 +739,7 @@ class RAGEngine:
         api_key: str = "",
         api_model: str = "",
         domain_profile: str = "legal_assistant",
-        intent_routing: str = "hybrid",
+        intent_routing: str = "rule",
     ) -> None:
         if llm_provider not in LLM_PROVIDERS:
             raise ValueError(f"不支持的模型提供方：{llm_provider}")

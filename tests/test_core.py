@@ -91,6 +91,41 @@ def test_load_documents_reads_docx_and_derives_legal_metadata(tmp_path):
     assert loaded[0].metadata["metadata_review"] == "required"
 
 
+def test_load_documents_balances_demo_categories_deterministically(tmp_path):
+    categories = ("宪法", "法律", "行政法规", "监察法规", "司法解释", "地方法规")
+    for category in categories:
+        category_dir = tmp_path / category
+        category_dir.mkdir()
+        for index in range(2):
+            (category_dir / f"{category}-{index}.txt").write_text(
+                f"{category}第{index}份示例资料。", encoding="utf-8"
+            )
+
+    first = load_documents(tmp_path, document_limit=6)
+    second = load_documents(tmp_path, document_limit=6)
+    first_sources = [document.metadata["source"] for document in first]
+
+    assert first_sources == [document.metadata["source"] for document in second]
+    assert len(first_sources) == 6
+    assert {source.split("/")[0] for source in first_sources} == set(categories)
+
+
+def test_load_documents_does_not_limit_runtime_uploads(tmp_path):
+    category_dir = tmp_path / "法律"
+    upload_dir = tmp_path / "uploads"
+    category_dir.mkdir()
+    upload_dir.mkdir()
+    (category_dir / "基础法一.txt").write_text("第一份基础法律资料。", encoding="utf-8")
+    (category_dir / "基础法二.txt").write_text("第二份基础法律资料。", encoding="utf-8")
+    (upload_dir / "用户补充.txt").write_text("用户新上传的补充资料。", encoding="utf-8")
+
+    loaded = load_documents(tmp_path, include_runtime_uploads=True, document_limit=1)
+    sources = {document.metadata["source"] for document in loaded}
+
+    assert len(sources) == 2
+    assert "uploads/用户补充.txt" in sources
+
+
 def test_bm25_handles_chinese_and_code_terms():
     documents = [
         SimpleNamespace(page_content="提交代码前运行 git status 和 git add。"),
@@ -453,6 +488,7 @@ def test_intent_router_rule_covers_main_chains():
 
 def test_legal_intent_router_covers_current_case_and_analysis():
     router = IntentRouter("rule")
+    assert router.route("民法典对离婚冷静期是如何规定的？").intent == "qa"
     assert router.route("现行有效的劳动法条有哪些？").intent == "current_law"
     assert router.route("修订前的旧法如何规定？").intent == "historical_law"
     assert router.route("请检索法院案号对应的判例").intent == "case_search"

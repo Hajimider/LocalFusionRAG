@@ -6,48 +6,45 @@ from argparse import Namespace
 from pathlib import Path
 from threading import Timer
 
+from dotenv import load_dotenv
+
 from rag_core import DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKER_MODEL
 from run_project import DEFAULT_INDEX, serve_command
 
 
 # ==================== 主要配置：日常只修改这里 ====================
 
-# 1. 回答模型："local" 使用本地 GGUF；"api" 使用 OpenAI 兼容 API。
-LLM_PROVIDER = "api"
+# 1. 回答模型固定使用 OpenAI 兼容 API；在项目根目录的 .env 中填写 BASE_URL、API_KEY、API_MODEL。
+# .env 只需首次配置，真实密钥不会被提交到 GitHub。
 
-# 2. 本地模式：填写 GGUF 文件或模型目录；API 模式不用填写。
-# 示例：LOCAL_MODEL_PATH = r"path/to/Qwen2.5-7B-Instruct-GGUF"
-LOCAL_MODEL_PATH = r""
-
-# 3. API 模式：填写兼容接口地址、密钥和模型名称；本地模式不用填写。
-# 切勿把真实 API Key 提交到 GitHub。
-API_BASE_URL = ""
-API_KEY = ""  # 仅在本地运行时填写，禁止提交真实密钥。
-API_MODEL = ""
-
-# 4. 检索模型：可填写本地目录；留空时使用项目默认 BGE 模型名称。
+# 2. 检索模型：可填写本地目录；留空时使用项目默认 BGE 模型名称。
 EMBEDDING_MODEL = r""
 
-# 5. 重排序模型：可填写本地目录；留空时使用默认名称或轻量回退。
+# 3. 重排序模型：可填写本地目录；留空时使用默认名称或轻量回退。
 # 示例：RERANKER_MODEL = r"path/to/bge-reranker-base"
 RERANKER_MODEL = r""
 
-# 6. 模型已下载时保持 True，禁止 BGE/Reranker 连接模型仓库。
-# 该开关不影响大模型 API 联网。
+# 4. 检索模型已下载时保持 True，禁止 BGE/Reranker 连接模型仓库。
+# 该开关不影响回答 API 联网。
 MODEL_REPOSITORY_OFFLINE = True
 
-# 7. 回答长度和网页端口；回答越长，耗时或 API 费用通常越高。
+# 5. 回答长度和网页端口；回答越长，API 耗时或费用通常越高。
 MAX_TOKENS = 512
 PORT = 8000
 
-# 8. 领域画像：本项目固定使用中国大陆中文法律资料。
+# 6. 领域画像：本项目固定使用中国大陆中文法律资料。
 DOMAIN_PROFILE = "legal_assistant"  # 法律辅助分析领域；不要改成其他领域除非复用旧编程语料。
 
-# 9. 知识库目录：放入已授权法条/判例资料，可改为外部目录。
+# 7. 知识库目录：放入已授权法条/判例资料，可改为外部目录。
 KNOWLEDGE_DIR = r"knowledge_base/legal_docs"  # 放入已授权的法条/判例 DOCX、PDF、Markdown 或 TXT。
 
-# 10. 意图路由：rule 只用关键词，hybrid 对模糊问题再调用模型，llm 全部调用模型分类。
-INTENT_ROUTING = "hybrid"
+# 8. Demo 默认均衡选取 200 份代表性资料建库；填写 0 时处理目录中的全部资料。
+# 网页上传的文件始终会加入索引，不受这个上限影响。
+DEMO_DOCUMENT_LIMIT = 200
+
+# 9. 意图路由：rule 只用关键词，hybrid 对模糊问题再调用 API，llm 全部调用 API 分类。
+# 默认使用 rule，避免 API 误把普通法条问题判成 current_law 后筛掉未知效力状态的资料。
+INTENT_ROUTING = "rule"
 
 # ==================== 配置结束：以下代码通常不用修改 ====================
 
@@ -85,22 +82,24 @@ def resolve_embedding_model(model: str) -> str:
 
 
 def main() -> None:
+    load_dotenv(Path(__file__).with_name(".env"))
     refresh_user_hf_cache()
     offline = "1" if MODEL_REPOSITORY_OFFLINE else "0"
     os.environ["HF_HUB_OFFLINE"] = offline
     os.environ["TRANSFORMERS_OFFLINE"] = offline
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
     os.environ["RAG_DOMAIN_PROFILE"] = DOMAIN_PROFILE.strip() or "legal_assistant"
-    os.environ["RAG_INTENT_ROUTING"] = INTENT_ROUTING.strip() or "hybrid"
+    os.environ["RAG_INTENT_ROUTING"] = INTENT_ROUTING.strip() or "rule"
     os.environ["RAG_KNOWLEDGE_DIR"] = str(Path(KNOWLEDGE_DIR).resolve())
-    provider = LLM_PROVIDER.strip().lower()
-    if provider not in {"local", "api"}:
-        raise ValueError('LLM_PROVIDER 只能填写 "local" 或 "api"。')
-    local_model = Path(LOCAL_MODEL_PATH.strip()) if LOCAL_MODEL_PATH.strip() else None
-    if provider == "local" and (local_model is None or not local_model.exists()):
-        raise FileNotFoundError("本地模式需要填写正确的 LOCAL_MODEL_PATH。")
-    if provider == "api" and not all(value.strip() for value in (API_BASE_URL, API_KEY, API_MODEL)):
-        raise ValueError("API 模式需要填写 API_BASE_URL、API_KEY 和 API_MODEL。")
+    if DEMO_DOCUMENT_LIMIT < 0:
+        raise ValueError("DEMO_DOCUMENT_LIMIT 不能小于 0。")
+    os.environ["RAG_DOCUMENT_LIMIT"] = str(DEMO_DOCUMENT_LIMIT)
+    provider = "api"
+    api_base_url = (os.getenv("BASE_URL", "").strip() or os.getenv("API_BASE_URL", "").strip())
+    api_key = os.getenv("API_KEY", "").strip()
+    api_model = os.getenv("API_MODEL", "").strip()
+    if provider == "api" and not all((api_base_url, api_key, api_model)):
+        raise ValueError("API 模式需要填写 BASE_URL、API_KEY 和 API_MODEL。")
     embedding_model = EMBEDDING_MODEL.strip() or DEFAULT_EMBEDDING_MODEL
     reranker_model = RERANKER_MODEL.strip() or DEFAULT_RERANKER_MODEL
     for label, value in (("EMBEDDING_MODEL", EMBEDDING_MODEL), ("RERANKER_MODEL", RERANKER_MODEL)):
@@ -117,14 +116,14 @@ def main() -> None:
                 "请先在当前 Python 环境安装缺失依赖，或将 RERANKER_MODEL 留空以使用轻量重排序。"
             ) from exc
 
-    os.environ["RAG_API_KEY"] = API_KEY if provider == "api" else ""
+    os.environ["RAG_API_KEY"] = api_key if provider == "api" else ""
     Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
     serve_command(
         Namespace(
-            model=local_model if provider == "local" else None,
+            model=None,
             provider=provider,
-            api_base_url=API_BASE_URL,
-            api_model=API_MODEL,
+            api_base_url=api_base_url,
+            api_model=api_model,
             embedding_model=embedding_model,
             reranker_model=reranker_model,
             context_size=4096,
