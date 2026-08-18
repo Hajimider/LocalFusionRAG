@@ -48,7 +48,6 @@ INDEX_MANIFEST = "manifest.json"
 INDEX_POINTER = "CURRENT"
 INDEX_LOCK = threading.RLock()
 RETRIEVAL_MODES = {"dense", "bm25", "hybrid"}
-LLM_PROVIDERS = {"local", "api"}
 FILESYSTEM_LOCK_TIMEOUT = 300.0
 FILESYSTEM_LOCK_POLL_INTERVAL = 0.1
 logger = logging.getLogger(__name__)
@@ -180,20 +179,6 @@ def reciprocal_rank_fusion(
         for rank, key in enumerate(keys, start=1):
             scores[key] = scores.get(key, 0.0) + weight / (rank_constant + rank)
     return scores
-
-
-def resolve_model_path(model_path: str | Path) -> Path:
-    path = Path(model_path).expanduser()
-    if path.is_file() and path.suffix.lower() == ".gguf":
-        return path.resolve()
-    if not path.is_dir():
-        raise FileNotFoundError(f"找不到 GGUF 模型：{path}")
-
-    split_files = sorted(path.glob("*00001-of-*.gguf"))
-    gguf_files = split_files or sorted(path.glob("*.gguf"))
-    if not gguf_files:
-        raise FileNotFoundError(f"目录中没有 GGUF 文件：{path}")
-    return gguf_files[0].resolve()
 
 
 def validate_document_name(filename: str) -> str:
@@ -615,51 +600,6 @@ def format_context(sources: Iterable[Source]) -> str:
     return "\n\n".join(blocks)
 
 
-class LocalLLM:
-    def __init__(
-        self,
-        model_path: str | Path | None,
-        context_size: int = 4096,
-        max_tokens: int = 512,
-        threads: int | None = None,
-    ) -> None:
-        try:
-            from llama_cpp import Llama
-        except ImportError as exc:
-            raise RuntimeError(
-                "缺少 llama-cpp-python，无法加载 GGUF 模型。请按 README 的 CPU wheel 命令单独安装。"
-            ) from exc
-
-        resolved = resolve_model_path(model_path)
-        cpu_count = os.cpu_count() or 4
-        self.max_tokens = max_tokens
-        self._lock = threading.Lock()
-        self._model = Llama(
-            model_path=str(resolved),
-            n_ctx=context_size,
-            n_batch=128,
-            n_threads=threads or max(1, min(8, cpu_count - 2)),
-            verbose=False,
-        )
-
-    def stream(self, messages: list[dict[str, str]], max_tokens: int | None = None) -> Iterator[str]:
-        with self._lock:
-            result = self._model.create_chat_completion(
-                messages=messages,
-                temperature=0.1,
-                top_p=0.9,
-                max_tokens=max_tokens or self.max_tokens,
-                stream=True,
-            )
-            for event in result:
-                token = event.get("choices", [{}])[0].get("delta", {}).get("content", "")
-                if token:
-                    yield token
-
-    def complete(self, messages: list[dict[str, str]], max_tokens: int | None = None) -> str:
-        return "".join(self.stream(messages, max_tokens=max_tokens)).strip()
-
-
 class OpenAICompatibleLLM:
     """使用标准库调用 OpenAI 兼容的 Chat Completions 流式接口。"""
 
@@ -727,37 +667,27 @@ class OpenAICompatibleLLM:
 class RAGEngine:
     def __init__(
         self,
-        model_path: str | Path | None,
         index_dir: str | Path = "storage/faiss",
         embedding_model: str = DEFAULT_EMBEDDING_MODEL,
-        context_size: int = 4096,
         max_tokens: int = 512,
-        threads: int | None = None,
         reranker_model: str = DEFAULT_RERANKER_MODEL,
-        llm_provider: str = "local",
         api_base_url: str = "",
         api_key: str = "",
         api_model: str = "",
         domain_profile: str = "legal_assistant",
         intent_routing: str = "rule",
     ) -> None:
-        if llm_provider not in LLM_PROVIDERS:
-            raise ValueError(f"不支持的模型提供方：{llm_provider}")
         self.index_dir = Path(index_dir)
         self.embedding_model = embedding_model
-        self.model_path = model_path
-        self.context_size = context_size
         self.max_tokens = max_tokens
-        self.threads = threads
         self.reranker_model = reranker_model
-        self.llm_provider = llm_provider
         self.api_base_url = api_base_url
         self.api_key = api_key
         self.api_model = api_model
         self.domain_profile = domain_profile
         self.intent_router = IntentRouter(intent_routing)
         self.prompt_orchestrator = PromptOrchestrator(domain_profile)
-        self._llm: LocalLLM | OpenAICompatibleLLM | None = None
+        self._llm: OpenAICompatibleLLM | None = None
         self._llm_lock = threading.Lock()
         self._store = None
         self._store_lock = threading.RLock()
@@ -768,20 +698,13 @@ class RAGEngine:
         self._reranker_error: str | None = None
 
     @property
-    def llm(self) -> LocalLLM | OpenAICompatibleLLM:
+    def llm(self) -> OpenAICompatibleLLM:
         if self._llm is None:
             with self._llm_lock:
                 if self._llm is None:
-                    if self.llm_provider == "api":
-                        self._llm = OpenAICompatibleLLM(
-                            self.api_base_url, self.api_key, self.api_model, self.max_tokens
-                        )
-                    else:
-                        if not self.model_path:
-                            raise ValueError("本地模式需要提供 GGUF 模型路径。")
-                        self._llm = LocalLLM(
-                            self.model_path, self.context_size, self.max_tokens, self.threads
-                        )
+                    self._llm = OpenAICompatibleLLM(
+                        self.api_base_url, self.api_key, self.api_model, self.max_tokens
+                    )
         return self._llm
 
     @property

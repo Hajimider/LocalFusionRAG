@@ -6,8 +6,8 @@ async function refreshHealth() {
     const data = await (await fetch('/api/health')).json();
     setText('health', data.status === 'ok' ? '服务正常' : '服务异常');
     setText('index-state', data.index_ready ? '已建库' : '未建库');
-    const provider = data.llm_provider === 'api' ? `API：${data.model_name}` : '本地 GGUF';
-    setText('model-state', data.model_configured ? `${provider} · ${data.model_loaded ? '已加载' : '待加载'}` : `${provider} · 未配置`);
+    const provider = `API：${data.model_name || '未指定模型'}`;
+    setText('model-state', data.model_configured ? `${provider} · ${data.model_loaded ? '已连接' : '待调用'}` : `${provider} · 未配置`);
   } catch (_) {
     setText('health', '无法连接服务');
     setText('model-state', '请先启动 FastAPI');

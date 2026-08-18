@@ -1,4 +1,4 @@
-# LocalFusionRAG
+# LegalFusionRAG
 
 ## 一、引言
 
@@ -6,7 +6,7 @@
 
 法律资料通常分散在法条、历史版本和判例文件中，文件格式也不统一。用户用自然语言提问时，单纯依赖关键词搜索容易漏掉语义相近的内容；直接让大模型回答又可能混用法律版本、把个案结论当成一般规则，或者在资料不足时自行补充。
 
-LocalFusionRAG 是一个面向中文法律资料的本地混合检索与辅助分析系统。项目把已下载或获授权的法律资料统一导入知识库，经过文档解析、切分、向量化、关键词检索、重排序和引用校验后，再通过兼容 API 生成回答。
+LegalFusionRAG 是一个面向中文法律资料的混合检索与辅助分析系统。项目把已下载或获授权的法律资料统一导入知识库，经过文档解析、切分、向量化、关键词检索、重排序和引用校验后，再通过兼容 API 生成回答。
 
 ### 2、目标与意义
 
@@ -31,7 +31,7 @@ LocalFusionRAG 是一个面向中文法律资料的本地混合检索与辅助�
 
 ### 4、项目演示
 
-首页提供固定示例问题，适合直接演示建库、提问和模型切换：
+首页提供固定示例问题，适合直接演示建库、提问和来源核对：
 
 ![法律 RAG 首页](docs/images/legal-rag-home.png)
 
@@ -80,7 +80,7 @@ DOCX 由 Python 标准库直接读取 OOXML，不需要安装 Office 或 `python
 python start_web.py
 ```
 
-使用 API 模式前，在项目根目录的 `.env` 中填写 `BASE_URL`、`API_KEY` 和 `API_MODEL`；从 GitHub 克隆时可先复制 `.env.example`。以后直接运行 `start_web.py` 即可，不需要再修改 Python 文件；真实 `.env` 已被 Git 忽略。
+项目只使用 OpenAI 兼容 API 生成回答，在项目根目录的 `.env` 中填写 `BASE_URL`、`API_KEY` 和 `API_MODEL`；从 GitHub 克隆时可先复制 `.env.example`。以后直接运行 `start_web.py` 即可，不需要再修改 Python 文件；真实 `.env` 已被 Git 忽略。
 
 法律 Demo 默认使用 `rule` 意图路由，只按关键词选择检索链路，避免额外 API 分类调用和误筛选资料；如需测试 API 意图分类，可将 `start_web.py` 顶部的 `INTENT_ROUTING` 改为 `hybrid`。
 
@@ -90,7 +90,7 @@ python start_web.py
 
 #### 2.1 当前的项目版本及未来规划
 
-- **当前版本**：法律领域本地混合 RAG 版本。
+- **当前版本**：法律领域混合 RAG 版本，检索与索引在本地执行，回答统一调用 API。
   - [√] 支持 PDF、DOCX、Markdown、TXT 文档解析。
   - [√] 支持 BGE、FAISS、BM25、RRF 和 CrossEncoder 检索链路。
   - [√] 支持现行法条、历史法条、判例检索和案件分析意图路由。
@@ -211,15 +211,15 @@ FastAPI 页面返回回答、来源和流式状态
 
 项目在固定公开的 `C-MTEB/T2Reranking` 子集上进行检索消融，包含 99 个查询和 1,591 篇候选文档。Hybrid + Reranker 的结果为：`Hit@5=0.9798`、`Recall@5=0.4193`、`MRR=0.7983`、`NDCG@5=0.6374`。这是一组固定公开子集上的实验结果，不是 C-MTEB 官方全量排行榜成绩。
 
-#### 3.2 大模型 llm 的调用
+#### 3.2 大模型 API 的调用
 
-项目把检索链路和回答模型解耦，回答阶段使用 OpenAI 兼容 API：
+项目把检索链路和回答模型解耦，回答阶段只使用 OpenAI 兼容 API：
 
 | 后端 | 调用方式 | 适用场景 |
 | --- | --- | --- |
-| API 模型 | OpenAI 兼容 Chat Completions 接口 | 不需要本地加载大模型，可按服务商切换 |
+| API 模型 | OpenAI 兼容 Chat Completions 接口 | 通过服务商切换回答模型 |
 
-回答阶段统一使用 OpenAI 兼容 Chat Completions 接口，并复用同一套检索上下文、Prompt、引用格式和流式输出协议。项目目前没有使用 vLLM，也没有微调回答模型。
+回答阶段统一使用 OpenAI 兼容 Chat Completions 接口，并复用同一套检索上下文、Prompt、引用格式和流式输出协议。项目不包含本地大模型推理、vLLM 或回答模型微调。
 
 #### 3.3 prompt 和构建问答链
 

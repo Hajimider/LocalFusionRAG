@@ -39,7 +39,7 @@ DEFAULT_INDEX_DIR = BASE_DIR / "storage" / "faiss"
 WEB_DIR = BASE_DIR / "web"
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 
-app = FastAPI(title="本地进阶 RAG 知识库问答系统", version="2.0.0")
+app = FastAPI(title="法律混合 RAG 知识库问答系统", version="2.0.0")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 _engine: RAGEngine | None = None
@@ -59,20 +59,6 @@ class ChatRequest(BaseModel):
     min_rerank_score: float | None = None
     document_type: Literal["all", "law", "case"] = "all"
     validity: Literal["all", "current", "historical", "unknown"] = "all"
-
-
-def llm_provider_from_env() -> str:
-    provider = os.getenv("RAG_LLM_PROVIDER", "local").strip().lower()
-    if provider not in {"local", "api"}:
-        raise RuntimeError("RAG_LLM_PROVIDER 只能设置为 local 或 api。")
-    return provider
-
-
-def model_path_from_env() -> str:
-    model_path = os.getenv("RAG_MODEL_PATH", "").strip()
-    if not model_path:
-        raise RuntimeError("本地模式尚未设置 RAG_MODEL_PATH，无法加载 GGUF 模型。")
-    return model_path
 
 
 def embedding_model_from_env() -> str:
@@ -105,15 +91,11 @@ def get_engine() -> RAGEngine:
     if _engine is None:
         with _engine_lock:
             if _engine is None:
-                provider = llm_provider_from_env()
                 _engine = RAGEngine(
-                    model_path=model_path_from_env() if provider == "local" else None,
                     index_dir=index_dir_from_env(),
                     embedding_model=embedding_model_from_env(),
-                    context_size=int(os.getenv("RAG_CONTEXT_SIZE", "4096")),
                     max_tokens=int(os.getenv("RAG_MAX_TOKENS", "512")),
                     reranker_model=os.getenv("RAG_RERANKER_MODEL", DEFAULT_RERANKER_MODEL),
-                    llm_provider=provider,
                     api_base_url=os.getenv("RAG_API_BASE_URL", ""),
                     api_key=os.getenv("RAG_API_KEY", ""),
                     api_model=os.getenv("RAG_API_MODEL", ""),
@@ -134,16 +116,13 @@ def home() -> FileResponse:
 
 @app.get("/api/health")
 def health() -> dict:
-    provider = llm_provider_from_env()
-    configured = (
-        bool(os.getenv("RAG_MODEL_PATH", "").strip())
-        if provider == "local"
-        else all(os.getenv(name, "").strip() for name in ("RAG_API_BASE_URL", "RAG_API_KEY", "RAG_API_MODEL"))
+    configured = all(
+        os.getenv(name, "").strip() for name in ("RAG_API_BASE_URL", "RAG_API_KEY", "RAG_API_MODEL")
     )
     return {
         "status": "ok",
-        "llm_provider": provider,
-        "model_name": os.getenv("RAG_API_MODEL", "") if provider == "api" else "本地 GGUF",
+        "llm_provider": "api",
+        "model_name": os.getenv("RAG_API_MODEL", ""),
         "model_configured": configured,
         "model_loaded": _engine is not None and _engine.model_loaded,
         "reranker_status": _engine.reranker_status if _engine is not None else "not_loaded",

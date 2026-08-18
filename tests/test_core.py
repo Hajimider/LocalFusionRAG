@@ -15,7 +15,6 @@ from rag_core import (
     RetrievalResult,
     load_documents,
     reciprocal_rank_fusion,
-    resolve_model_path,
     tokenize_for_bm25,
     validate_document_name,
 )
@@ -57,11 +56,6 @@ def test_validate_document_name_accepts_supported_files():
 def test_validate_document_name_rejects_unsupported_files():
     with pytest.raises(ValueError):
         validate_document_name("secret.exe")
-
-
-def test_resolve_model_path_rejects_missing_path():
-    with pytest.raises(FileNotFoundError):
-        resolve_model_path("__missing_model_directory_for_test__")
 
 
 def test_load_documents_reads_docx_and_derives_legal_metadata(tmp_path):
@@ -378,46 +372,15 @@ def test_custom_index_directory_comes_from_environment(monkeypatch):
     assert min_rerank_score_from_env() == 0.28
 
 
-def test_serve_command_accepts_path_model(monkeypatch):
-    calls = {}
-    monkeypatch.setitem(
-        sys.modules,
-        "uvicorn",
-        SimpleNamespace(run=lambda app, **kwargs: calls.update(app=app, **kwargs)),
-    )
-    serve_command(
-        SimpleNamespace(
-            model=Path("external-model"),
-            provider="local",
-            api_base_url="",
-            api_model="",
-            embedding_model="embedding-model",
-            reranker_model="reranker-model",
-            context_size=4096,
-            max_tokens=256,
-            min_rerank_score=None,
-            index=Path("storage/faiss"),
-            host="127.0.0.1",
-            port=8000,
-        )
-    )
-
-    assert os.environ["RAG_MODEL_PATH"] == "external-model"
-    assert calls == {"app": "app:app", "host": "127.0.0.1", "port": 8000, "reload": False}
-
-
-def test_serve_command_configures_api_provider(monkeypatch):
+def test_serve_command_configures_api_only(monkeypatch):
     monkeypatch.setenv("RAG_API_KEY", "secret")
     monkeypatch.setitem(sys.modules, "uvicorn", SimpleNamespace(run=lambda *_args, **_kwargs: None))
     serve_command(
         SimpleNamespace(
-            model=None,
-            provider="api",
             api_base_url="https://example.com/v1",
             api_model="test-model",
             embedding_model="embedding-model",
             reranker_model="reranker-model",
-            context_size=4096,
             max_tokens=256,
             min_rerank_score=None,
             index=Path("storage/faiss"),
@@ -426,7 +389,6 @@ def test_serve_command_configures_api_provider(monkeypatch):
         )
     )
 
-    assert os.environ["RAG_LLM_PROVIDER"] == "api"
     assert os.environ["RAG_API_BASE_URL"] == "https://example.com/v1"
     assert os.environ["RAG_API_MODEL"] == "test-model"
 

@@ -80,14 +80,11 @@ def citations_are_valid(answer: str, source_count: int) -> bool:
     return bool(citations) and all(1 <= value <= source_count for value in citations)
 
 
-def add_rag_arguments(parser: argparse.ArgumentParser, require_model: bool = True) -> None:
-    parser.add_argument("--provider", choices=("local", "api"), default="local", help="大模型后端")
-    parser.add_argument("--model", required=False, help="本地 GGUF 文件或其所在目录")
+def add_rag_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--api-base-url", default="", help="OpenAI 兼容 API 地址，例如 https://example.com/v1")
     parser.add_argument("--api-model", default="", help="API 模型名称")
     parser.add_argument("--embedding-model", default=DEFAULT_EMBEDDING_MODEL, help="BGE 模型名称或本地目录")
     parser.add_argument("--index", type=Path, default=DEFAULT_INDEX, help="FAISS 索引目录")
-    parser.add_argument("--context-size", type=int, default=4096, help="上下文长度")
     parser.add_argument("--max-tokens", type=int, default=512, help="最大生成 token 数")
     parser.add_argument("--reranker-model", default=DEFAULT_RERANKER_MODEL, help="CrossEncoder 重排序模型")
 
@@ -99,7 +96,7 @@ def add_retrieval_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--document-type", choices=("all", "law", "case"), default="all")
     parser.add_argument("--validity", choices=("all", "current", "historical", "unknown"), default="all")
     parser.add_argument("--no-rerank", action="store_true", help="关闭 CrossEncoder 重排序")
-    parser.add_argument("--no-rewrite", action="store_true", help="关闭 7B 模型查询改写")
+    parser.add_argument("--no-rewrite", action="store_true", help="关闭查询改写")
     parser.add_argument(
         "--min-rerank-score",
         type=float,
@@ -124,13 +121,10 @@ def build_command(args: argparse.Namespace) -> None:
 
 def create_engine(args: argparse.Namespace) -> RAGEngine:
     return RAGEngine(
-        model_path=args.model,
         index_dir=args.index,
         embedding_model=args.embedding_model,
-        context_size=args.context_size,
         max_tokens=args.max_tokens,
         reranker_model=args.reranker_model,
-        llm_provider=args.provider,
         api_base_url=args.api_base_url,
         api_key=os.getenv("RAG_API_KEY", ""),
         api_model=args.api_model,
@@ -172,12 +166,9 @@ def ask_command(args: argparse.Namespace) -> None:
 
 
 def serve_command(args: argparse.Namespace) -> None:
-    os.environ["RAG_LLM_PROVIDER"] = args.provider
-    os.environ["RAG_MODEL_PATH"] = str(args.model or "")
     os.environ["RAG_API_BASE_URL"] = args.api_base_url
     os.environ["RAG_API_MODEL"] = args.api_model
     os.environ["RAG_EMBEDDING_MODEL"] = str(args.embedding_model)
-    os.environ["RAG_CONTEXT_SIZE"] = str(args.context_size)
     os.environ["RAG_MAX_TOKENS"] = str(args.max_tokens)
     os.environ["RAG_RERANKER_MODEL"] = str(args.reranker_model)
     os.environ["RAG_INDEX_DIR"] = str(args.index.resolve())
@@ -259,8 +250,10 @@ def write_error_cases(report_path: Path, ablation: dict) -> None:
 
 
 def evaluate_command(args: argparse.Namespace) -> None:
-    if not args.retrieval_only and not args.model:
-        raise ValueError("完整评测需要 --model；只检查检索时请加 --retrieval-only。")
+    if not args.retrieval_only and not all(
+        (args.api_base_url.strip(), args.api_model.strip(), os.getenv("RAG_API_KEY", "").strip())
+    ):
+        raise ValueError("完整评测需要配置 API 地址、API 模型和 RAG_API_KEY；只检查检索时请加 --retrieval-only。")
     cases = load_cases(args.cases)[: args.limit or None]
     if not cases:
         raise ValueError("评测题集为空，请检查 cases 文件或 limit 参数。")
@@ -383,7 +376,7 @@ def evaluate_command(args: argparse.Namespace) -> None:
 
 
 def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="本地 RAG 知识库问答系统")
+    parser = argparse.ArgumentParser(description="法律混合 RAG 知识库问答系统")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     build_parser = subparsers.add_parser("build", help="读取文档并建立 FAISS 索引")
@@ -397,7 +390,7 @@ def create_parser() -> argparse.ArgumentParser:
     ask_parser = subparsers.add_parser("ask", help="在命令行提问")
     add_rag_arguments(ask_parser)
     ask_parser.add_argument("--question", required=True)
-    ask_parser.add_argument("--no-rag", action="store_true", help="关闭知识库，仅使用基础模型")
+    ask_parser.add_argument("--no-rag", action="store_true", help="关闭知识库，仅调用 API 模型")
     add_retrieval_arguments(ask_parser)
     ask_parser.set_defaults(handler=ask_command)
 
@@ -409,7 +402,7 @@ def create_parser() -> argparse.ArgumentParser:
     serve_parser.set_defaults(handler=serve_command)
 
     evaluate_parser = subparsers.add_parser("evaluate", help="自动评测 RAG 效果")
-    add_rag_arguments(evaluate_parser, require_model=False)
+    add_rag_arguments(evaluate_parser)
     evaluate_parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     evaluate_parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     evaluate_parser.add_argument("--limit", type=nonnegative_int, default=0)

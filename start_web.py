@@ -120,13 +120,10 @@ def main() -> None:
     Timer(1.0, lambda: webbrowser.open(f"http://127.0.0.1:{PORT}")).start()
     serve_command(
         Namespace(
-            model=None,
-            provider=provider,
             api_base_url=api_base_url,
             api_model=api_model,
             embedding_model=embedding_model,
             reranker_model=reranker_model,
-            context_size=4096,
             max_tokens=MAX_TOKENS,
             min_rerank_score=0.280595,
             host="127.0.0.1",
